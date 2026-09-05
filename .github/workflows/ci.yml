@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: jazzy
+
+      # Builds every package under ros2_ws/src and runs their default tests.
+      # This does not start Gazebo/MoveIt; it only proves the workspace compiles.
+      - uses: ros-tooling/action-ros-ci@v0.3
+        with:
+          package-name: >
+            panda_demo_description
+            panda_demo_gazebo
+            panda_demo_moveit_config
+            panda_grasp_adapter
+            panda_perception
+            panda_pick_place
+          target-ros2-distro: jazzy

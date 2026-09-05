@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>panda_perception</name>
+  <version>0.1.0</version>
+  <description>RGB-D based cube pose estimation for the Panda demonstration.</description>
+  <maintainer email="user@example.com">Workspace User</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>cv_bridge</depend>
+  <depend>geometry_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>visualization_msgs</depend>
+  <exec_depend>image_transport</exec_depend>
+  <exec_depend>compressed_image_transport</exec_depend>
+  <exec_depend>compressed_depth_image_transport</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

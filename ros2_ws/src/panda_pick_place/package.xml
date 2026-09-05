@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>panda_pick_place</name>
+  <version>0.1.0</version>
+  <description>Jetson-side MoveIt motion tests and RGB-D driven Panda pick-and-place state machine.</description>
+  <maintainer email="user@example.com">Workspace User</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>control_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>moveit_msgs</depend>
+  <depend>moveit_ros_planning_interface</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_action</depend>
+  <depend>shape_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <exec_depend>panda_demo_moveit_config</exec_depend>
+  <exec_depend>moveit_configs_utils</exec_depend>
+  <exec_depend>moveit_resources_panda_moveit_config</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

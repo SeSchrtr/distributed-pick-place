@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>panda_demo_moveit_config</name>
+  <version>0.1.0</version>
+  <description>Jetson-side MoveIt launch configuration for the distributed Panda.</description>
+  <maintainer email="user@example.com">Workspace User</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>moveit_configs_utils</exec_depend>
+  <exec_depend>moveit_resources_panda_moveit_config</exec_depend>
+  <exec_depend>moveit_ros_move_group</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
+
