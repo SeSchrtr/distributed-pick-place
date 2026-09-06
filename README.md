@@ -2,20 +2,25 @@
 
 [![CI](https://github.com/SeSchrtr/distributed-pick-place/actions/workflows/ci.yml/badge.svg)](https://github.com/SeSchrtr/distributed-pick-place/actions/workflows/ci.yml)
 
-This project runs Gazebo Harmonic and `ros2_control` on an Ubuntu 24.04
-ThinkPad while RGB-D perception, MoveIt 2, OMPL, and the pick-and-place state
-machine run in an ARM64 ROS 2 Jazzy container on a Jetson Nano. The two sides
+This project runs Gazebo Harmonic and `ros2_control` headless on a dedicated
+Ubuntu/Linux Mint simulation host while RGB-D perception, MoveIt 2, OMPL, and
+the pick-and-place state machine run in an ARM64 ROS 2 Jazzy container on a
+Jetson Nano. A separate WiFi-only dev machine only builds, orchestrates over
+SSH, and records a rosbag; it runs no simulation nodes of its own. The hosts
 communicate only through ROS 2 / Cyclone DDS during planning and execution.
 
 ## Architecture
 
-| ThinkPad | Jetson Nano container |
+| Simulation host | Jetson Nano container |
 | --- | --- |
-| Gazebo Sim + GUI | ROS 2 Jazzy |
+| Gazebo Sim (headless) | ROS 2 Jazzy |
 | Panda physics + overhead RGB-D camera | RGB-D pose estimator (`panda_perception`) |
 | `gz_ros2_control` controllers | MoveIt `move_group` |
-| `image_transport` compressors + RViz depth view | OMPL, IK, collision checking |
+| `image_transport` compressors | OMPL, IK, collision checking |
 | Grasp adapter + DetachableJoint | Pose-driven pick-and-place state machine |
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), "Three-Host Topology",
+for the current dev machine / simulation host / Jetson mapping.
 
 Perception runs on the Jetson, co-located with planning, because the target
 deployment wires the real camera directly into the Jetson; see
@@ -30,14 +35,16 @@ placement.
 
 ## Prerequisites
 
-- ThinkPad: Ubuntu 24.04 with the official ROS 2 Jazzy apt repository enabled.
+- Simulation host: reachable as `ssh thinkpadt440sserver` (override with
+  `SERVER_SSH_HOST`), with ROS 2 Jazzy and Gazebo Harmonic installed and DDS
+  pinned to its wired interface (see `infra/thinkpadt440sserver/env.sh`).
 - Jetson Nano: reachable as `ssh jetson`, Docker usable without `sudo`, and
   enough free storage for the Jazzy/MoveIt image.
-- Both machines on the same multicast-capable LAN.
+- All hosts on the same multicast-capable LAN.
 - No ROS installation, OS upgrade, JetPack change, or Gazebo installation is
   required on the Jetson host.
 
-Install any missing ThinkPad packages:
+Install any missing dev-machine packages:
 
 ```bash
 ./infra/thinkpad/setup.sh
@@ -48,14 +55,26 @@ missing and may therefore request the user's sudo password.
 
 ## Build And Start
 
-Open three ThinkPad terminals in the repository.
+Open three dev-machine terminals in the repository.
 
-Terminal 1 starts Gazebo and RViz, builds the ThinkPad packages, spawns the
-Panda, activates all controllers, and starts the `image_transport` camera
-compressors:
+Terminal 1 syncs the repo to the simulation host, builds the simulation-side
+packages there, and starts headless Gazebo, spawning the Panda, activating
+all controllers, and starting the `image_transport` camera compressors:
 
 ```bash
 ./scripts/launch_simulation.sh
+```
+
+For a previously built, unchanged simulation, skip the remote build:
+
+```bash
+PANDA_SKIP_BUILD=1 ./scripts/launch_simulation.sh
+```
+
+To stop it later:
+
+```bash
+./scripts/stop_simulation.sh
 ```
 
 Terminal 2 validates the simulation interfaces, synchronizes this repository,
@@ -84,13 +103,10 @@ remote log contains `STATE DONE`. It moves HOME, waits for a fresh
 `/perception/cube_pose`, and uses that measured position for all pick targets;
 the Gazebo model pose is not an input to the estimator.
 
-RViz opens with `/perception/depth_colormap` visible. The image is a stable,
-colorized depth view with the accepted cube contour, centroid, and median depth
-overlaid. The 3D view also shows `/perception/cube_marker`. To run without RViz:
-
-```bash
-./scripts/launch_simulation.sh launch_rviz:=false
-```
+The simulation host runs headless (no RViz); `/perception/depth_colormap` and
+`/perception/cube_marker` are still published for debugging and can be viewed
+by pointing a local RViz instance at the shared `ROS_DOMAIN_ID` from any host
+on the LAN.
 
 To test a manually moved cube without resetting it before the run:
 

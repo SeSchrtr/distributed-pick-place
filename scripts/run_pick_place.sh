@@ -6,6 +6,8 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REMOTE="${JETSON_SSH_HOST:-jetson}"
 CONTAINER_NAME="${PANDA_CONTAINER_NAME:-panda-planner}"
 READY_TIMEOUT="${PANDA_READY_TIMEOUT:-60}"
+SIM_REMOTE="${SERVER_SSH_HOST:-thinkpad440sserver}"
+SIM_REMOTE_ROOT="${SERVER_PROJECT_DIR:-panda_distributed_pick_place}"
 # Off by default: see infra/thinkpad/record_screen.sh and docs/TROUBLESHOOTING.md
 # for why GNOME's screencast D-Bus API can't currently be driven unattended.
 RECORD_VIDEO="${PANDA_RECORD_VIDEO:-0}"
@@ -27,6 +29,14 @@ VIDEO_STARTED=0
 cleanup() {
   if [[ -n "${BAG_PID}" ]] && kill -0 "${BAG_PID}" 2>/dev/null; then
     kill -INT "${BAG_PID}" 2>/dev/null || true
+    # ros2 bag record does not reliably exit on SIGINT with
+    # --disable-keyboard-controls; don't let a stuck recorder hang the whole
+    # script forever.
+    for _ in $(seq 1 10); do
+      kill -0 "${BAG_PID}" 2>/dev/null || break
+      sleep 1
+    done
+    kill -KILL "${BAG_PID}" 2>/dev/null || true
     wait "${BAG_PID}" 2>/dev/null || true
   fi
   if [[ "${VIDEO_STARTED}" == "1" ]]; then
@@ -55,14 +65,22 @@ wait_until() {
   echo "Ready: ${description}"
 }
 
+# Simulation-side checks run against the server over SSH: this dev machine is
+# WiFi-only and is not part of the runtime DDS-critical path (see
+# docs/ARCHITECTURE.md, "Three-Host Topology").
+on_server() {
+  ssh "${SIM_REMOTE}" \
+    "source ${SIM_REMOTE_ROOT}/infra/thinkpadt440sserver/env.sh && $1"
+}
+
 joint_state_available() {
-  timeout 15 ros2 topic echo /joint_states --once >/dev/null 2>&1
+  on_server "timeout 15 ros2 topic echo /joint_states --once >/dev/null 2>&1"
 }
 
 interfaces_available() {
   local actions services
-  actions="$(ros2 action list 2>/dev/null)"
-  services="$(ros2 service list 2>/dev/null)"
+  actions="$(on_server "ros2 action list 2>/dev/null")"
+  services="$(on_server "ros2 service list 2>/dev/null")"
   grep -qx '/panda_arm_controller/follow_joint_trajectory' <<<"${actions}" &&
     grep -qx '/panda_hand_controller/gripper_cmd' <<<"${actions}" &&
     grep -qx '/grasp/attach' <<<"${services}" &&
@@ -77,7 +95,7 @@ move_group_ready() {
 }
 
 cube_pose_available() {
-  timeout 15 ros2 topic echo /perception/cube_pose --once >/dev/null 2>&1
+  on_server "timeout 15 ros2 topic echo /perception/cube_pose --once >/dev/null 2>&1"
 }
 
 wait_until "/joint_states sample" joint_state_available

@@ -7,6 +7,8 @@ REMOTE="${JETSON_SSH_HOST:-jetson}"
 REMOTE_ROOT="${JETSON_PROJECT_DIR:-panda_distributed_pick_place}"
 CONTAINER_NAME="${PANDA_CONTAINER_NAME:-panda-planner}"
 READY_TIMEOUT="${PANDA_READY_TIMEOUT:-60}"
+SIM_REMOTE="${SERVER_SSH_HOST:-thinkpad440sserver}"
+SIM_REMOTE_ROOT="${SERVER_PROJECT_DIR:-panda_distributed_pick_place}"
 
 source "${REPO_ROOT}/infra/thinkpad/env.sh"
 
@@ -24,30 +26,38 @@ wait_until() {
   echo "Ready: ${description}"
 }
 
+# All simulation-side checks run against the server over SSH, not locally:
+# this dev machine is WiFi-only and is not part of the runtime DDS-critical
+# path (see docs/ARCHITECTURE.md, "Three-Host Topology").
+on_server() {
+  ssh "${SIM_REMOTE}" \
+    "source ${SIM_REMOTE_ROOT}/infra/thinkpadt440sserver/env.sh && $1"
+}
+
 controller_active() {
-  ros2 control list_controllers 2>/dev/null |
+  on_server "ros2 control list_controllers 2>/dev/null" |
     grep -Eq "^$1[[:space:]].*[[:space:]]active$"
 }
 
 joint_state_available() {
-  timeout 15 ros2 topic echo /joint_states --once >/dev/null 2>&1
+  on_server "timeout 15 ros2 topic echo /joint_states --once >/dev/null 2>&1"
 }
 
 arm_action_available() {
-  ros2 action list 2>/dev/null |
+  on_server "ros2 action list 2>/dev/null" |
     grep -qx '/panda_arm_controller/follow_joint_trajectory'
 }
 
 grasp_services_available() {
   local services
-  services="$(ros2 service list 2>/dev/null)"
+  services="$(on_server "ros2 service list 2>/dev/null")"
   grep -qx '/grasp/attach' <<<"${services}" &&
     grep -qx '/grasp/detach' <<<"${services}" &&
     grep -qx '/grasp/reset_object' <<<"${services}"
 }
 
 cube_pose_available() {
-  timeout 15 ros2 topic echo /perception/cube_pose --once >/dev/null 2>&1
+  on_server "timeout 15 ros2 topic echo /perception/cube_pose --once >/dev/null 2>&1"
 }
 
 move_group_ready() {

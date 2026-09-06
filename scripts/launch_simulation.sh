@@ -1,20 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Gazebo now runs on a separate simulation host (thinkpad440sserver), not on
+# this dev machine, so this script only orchestrates it over SSH: sync repo,
+# build the simulation-side packages there, and start it headless.
+# Local-run fallback (this machine hosting Gazebo directly) still exists as
+# infra/thinkpad/setup.sh + build_thinkpad.sh, but is no longer the default path.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REMOTE="${SERVER_SSH_HOST:-thinkpad440sserver}"
+REMOTE_ROOT="${SERVER_PROJECT_DIR:-panda_distributed_pick_place}"
 
-"${SCRIPT_DIR}/build_thinkpad.sh" --packages-up-to \
-  panda_demo_description panda_grasp_adapter panda_demo_gazebo
+"${SCRIPT_DIR}/sync_to_server.sh"
+if [[ "${PANDA_SKIP_BUILD:-0}" != "1" ]]; then
+  ssh "${REMOTE}" "${REMOTE_ROOT}/infra/thinkpadt440sserver/build.sh"
+fi
+ssh "${REMOTE}" "${REMOTE_ROOT}/infra/thinkpadt440sserver/run.sh" "$@"
 
-source "${REPO_ROOT}/infra/thinkpad/env.sh"
-
-# VS Code installed as a Snap exports GTK paths that make native Gazebo load
-# incompatible core20 libraries. Gazebo must use the host's Noble libraries.
-unset SNAP SNAP_ARCH SNAP_COMMON SNAP_CONTEXT SNAP_COOKIE SNAP_DATA SNAP_EUID
-unset SNAP_INSTANCE_NAME SNAP_LIBRARY_PATH SNAP_NAME SNAP_REAL_HOME SNAP_REVISION
-unset SNAP_UID SNAP_USER_COMMON SNAP_USER_DATA SNAP_VERSION
-unset GTK_EXE_PREFIX GTK_PATH GDK_PIXBUF_MODULEDIR GDK_PIXBUF_MODULE_FILE
-unset GIO_MODULE_DIR GTK_IM_MODULE_FILE
-
-exec ros2 launch panda_demo_gazebo simulation.launch.py "$@"
+echo "Simulation launched on ${REMOTE}. Tail /tmp/panda_simulation.log there for details."

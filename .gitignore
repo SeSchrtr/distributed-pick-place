@@ -6,4 +6,5 @@ ros2_ws/install/
 ros2_ws/log/
 .colcon/
 runs/
+secrets.txt
 

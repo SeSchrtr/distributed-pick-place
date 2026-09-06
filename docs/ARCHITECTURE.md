@@ -1,5 +1,26 @@
 # Architecture
 
+## Three-Host Topology (Current)
+
+Simulation no longer runs on the dev ThinkPad. The diagram and network
+contract below still describe the correct logical placement of each
+component; only the physical machine labeled "ThinkPad" has moved:
+
+| Role | Hostname | Notes |
+| --- | --- | --- |
+| Dev machine | `user-ThinkPad-T440p` (WiFi only) | Development, git, and SSH-based orchestration of the other two hosts. Runs no ROS 2 nodes itself except a local `ros2 bag record` during a pick-and-place run. |
+| Simulation host | `thinkpadt440sserver` (SSH alias; both wired and WiFi active) | Everything labeled "ThinkPad" in the diagram below: Gazebo (headless, no GUI/RViz), `gz_ros2_control`, controllers, camera encoders, `panda_grasp_adapter`. |
+| Planner | `jetson` (SSH alias, Docker) | Unchanged: `panda_perception`, `move_group`, `panda_pick_place`. |
+
+The simulation host is dual-homed (WiFi kept on for normal desktop use), so
+Cyclone DDS is pinned to the wired interface via
+`infra/thinkpadt440sserver/env.sh` (`CYCLONEDDS_URI` pointing at
+`/etc/panda-demo/cyclonedds.xml`) to prevent multicast discovery from
+stalling. Orchestration scripts (`scripts/launch_simulation.sh`,
+`scripts/launch_planner.sh`, `scripts/run_pick_place.sh`) drive the
+simulation host over SSH (`SERVER_SSH_HOST`, default `thinkpadt440sserver`)
+the same way they already drove the Jetson (`JETSON_SSH_HOST`).
+
 ## Runtime Placement
 
 ```mermaid
