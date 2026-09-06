@@ -107,13 +107,23 @@ independently with `launch_rviz:=false`; perception continues to run.
 
 ## No Video In `runs/<...>/gazebo.webm`
 
-`run_pick_place.sh` logs recorder failures to
-`runs/<...>/record_screen.log` instead of aborting the run. Check that log
-first. `infra/thinkpad/record_screen.sh` assumes GNOME's Screencast D-Bus
-interface (default Ubuntu 24.04 GNOME/Wayland session); on Sway, KDE, or an
-X11 session it needs a `wf-recorder`/`ffmpeg -f x11grab` backend instead (see
-the comments in that script). The rosbag and text log are unaffected either
-way; disable the attempt entirely with `PANDA_RECORD_VIDEO=0`.
+This doesn't happen yet because it isn't implemented: `PANDA_RECORD_VIDEO`
+defaults to `0`. `infra/thinkpad/record_screen.sh` was originally written
+against `org.gnome.Shell.Screencast`, a D-Bus method that GNOME Shell 46
+removed (confirmed live: `gdbus` returns `UnknownMethod`). The two
+replacements are `org.gnome.Mutter.ScreenCast` (private/unstable, undocumented,
+intended only for `xdg-desktop-portal-gnome`'s own use) and
+`org.freedesktop.portal.ScreenCast` (the stable, documented API, confirmed
+present here). The portal is the correct long-term fix, but `Start()` shows a
+one-time interactive "Share" consent dialog per session (Wayland's security
+model disallows silent capture by design) and getting frames out requires
+consuming a PipeWire stream, e.g. via `gst-launch-1.0 pipewiresrc`. Until that
+is built, the practical options are: (1) trigger GNOME's own built-in
+recorder manually (`Ctrl+Alt+Shift+R`, saves to `~/Videos`) and move the file
+into the run's directory by hand when a demo is needed; (2) implement the
+portal + PipeWire pipeline and accept the one-time consent click per session;
+or (3) skip live desktop capture and instead record a demo by replaying a
+saved rosbag through RViz. The rosbag and text log are unaffected either way.
 
 ## Known Non-Fatal Warnings
 

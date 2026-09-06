@@ -1,34 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Wraps GNOME Shell's built-in Screencast D-Bus API, which is present on an
-# unmodified Ubuntu 24.04 GNOME/Wayland session (the ThinkPad default) with no
-# extra packages. This has not been exercised against a live GNOME session;
-# verify it once on the real ThinkPad before relying on it.
-#
-# If the ThinkPad runs a different desktop (Sway/wlroots, KDE, or an X11
-# session), replace start_recording/stop_recording with `wf-recorder` or
-# `ffmpeg -f x11grab` equivalents; callers only depend on this script's
-# `start <output-file>` / `stop` interface, not on how it is implemented.
-#
-# Caveat: GNOME's Screencast API historically writes into $XDG_VIDEOS_DIR
-# and may echo back a different actual filename; this script reports what
-# GNOME returned so the caller can relocate the file if needed.
+# NOT CURRENTLY IMPLEMENTED. This was meant to wrap GNOME Shell's Screencast
+# D-Bus API (org.gnome.Shell.Screencast), but that interface no longer exists
+# on GNOME Shell 46 (confirmed live on this machine: gdbus reports
+# UnknownMethod). The replacement is either:
+#   - org.gnome.Mutter.ScreenCast: private/unstable, undocumented, meant only
+#     for xdg-desktop-portal-gnome's own use; or
+#   - org.freedesktop.portal.ScreenCast: the stable, documented API, but it
+#     requires a one-time interactive "Share" consent dialog per session
+#     (Wayland's security model deliberately disallows silent screen capture),
+#     plus a real PipeWire consumer (e.g. gst-launch-1.0 pipewiresrc) to turn
+#     the resulting stream into a file.
+# Neither is a drop-in replacement for a single unattended gdbus call, so this
+# has been left unimplemented rather than shipped as something that silently
+# fails every run. See docs/TROUBLESHOOTING.md for the options and callers
+# must keep working: `record_screen.sh start <output-file>` / `stop`.
 
 start_recording() {
   local output_file="$1"
-  gdbus call --session \
-    --dest org.gnome.Shell \
-    --object-path /org/gnome/Shell/Screencast \
-    --method org.gnome.Shell.Screencast.Screencast \
-    "${output_file}" "{'framerate': <30>, 'draw-cursor': <true>}"
+  echo "record_screen.sh: automatic screen recording is not implemented on this GNOME version (see script header); skipping ${output_file}." >&2
+  return 1
 }
 
 stop_recording() {
-  gdbus call --session \
-    --dest org.gnome.Shell \
-    --object-path /org/gnome/Shell/Screencast \
-    --method org.gnome.Shell.Screencast.StopScreencast
+  return 0
 }
 
 case "${1:-}" in

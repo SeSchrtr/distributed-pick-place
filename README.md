@@ -134,13 +134,14 @@ runs/<UTC timestamp>_pick_place/
   manifest.txt     # commit hash, result, reset_object, timestamps
 ```
 
-The log is no longer deleted after the run (it previously was). Screen
-recording uses [`infra/thinkpad/record_screen.sh`](infra/thinkpad/record_screen.sh),
-which wraps GNOME's built-in Screencast D-Bus API for the ThinkPad's default
-Ubuntu 24.04 GNOME/Wayland session; it has not yet been verified against a
-live session, and a different desktop environment needs a different backend
-(see the comments in that script). Recording failures are logged but do not
-fail the run. Disable video with `PANDA_RECORD_VIDEO=0`. Prune old runs with:
+The log is no longer deleted after the run (it previously was). `gazebo.webm`
+is aspirational for now: [`infra/thinkpad/record_screen.sh`](infra/thinkpad/record_screen.sh)
+is a stub, since GNOME Shell 46 removed the D-Bus method it was meant to
+wrap and the replacements each need either an undocumented private API or a
+one-time interactive consent dialog plus a PipeWire capture pipeline (see
+[`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)). `PANDA_RECORD_VIDEO`
+defaults to `0` until that's implemented; the rosbag and log always record.
+Prune old runs with:
 
 ```bash
 ./scripts/prune_runs.sh 20   # keep the newest 20 runs, delete the rest
@@ -165,7 +166,7 @@ PANDA_CONTAINER_NAME=panda-planner
 PANDA_IMAGE_TAG=panda-planner:jazzy
 PANDA_READY_TIMEOUT=60
 PANDA_RESET_OBJECT=true
-PANDA_RECORD_VIDEO=1
+PANDA_RECORD_VIDEO=0
 ```
 
 Do not source both host environment files manually. ThinkPad scripts source

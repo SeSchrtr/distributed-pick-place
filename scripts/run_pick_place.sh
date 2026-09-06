@@ -6,7 +6,9 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REMOTE="${JETSON_SSH_HOST:-jetson}"
 CONTAINER_NAME="${PANDA_CONTAINER_NAME:-panda-planner}"
 READY_TIMEOUT="${PANDA_READY_TIMEOUT:-60}"
-RECORD_VIDEO="${PANDA_RECORD_VIDEO:-1}"
+# Off by default: see infra/thinkpad/record_screen.sh and docs/TROUBLESHOOTING.md
+# for why GNOME's screencast D-Bus API can't currently be driven unattended.
+RECORD_VIDEO="${PANDA_RECORD_VIDEO:-0}"
 
 # Every run gets its own directory for traceability: full log, a rosbag2 of
 # joint states/TF/cube pose/trajectory action feedback and grasp service
