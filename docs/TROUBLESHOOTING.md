@@ -105,6 +105,16 @@ coordinates outside the table workspace. Its throttled warnings (in the
 Jetson container log) state which check failed. RViz can be disabled
 independently with `launch_rviz:=false`; perception continues to run.
 
+## No Video In `runs/<...>/gazebo.webm`
+
+`run_pick_place.sh` logs recorder failures to
+`runs/<...>/record_screen.log` instead of aborting the run. Check that log
+first. `infra/thinkpad/record_screen.sh` assumes GNOME's Screencast D-Bus
+interface (default Ubuntu 24.04 GNOME/Wayland session); on Sway, KDE, or an
+X11 session it needs a `wf-recorder`/`ffmpeg -f x11grab` backend instead (see
+the comments in that script). The rosbag and text log are unaffected either
+way; disable the attempt entirely with `PANDA_RECORD_VIDEO=0`.
+
 ## Known Non-Fatal Warnings
 
 - KDL warns that the official Panda root link has inertia. The validated

@@ -120,6 +120,32 @@ The full validation report, including host versions, controller/action names,
 ARM64 proof, and the measured final cube pose, is in
 [`docs/SETUP_REPORT.md`](docs/SETUP_REPORT.md).
 
+## Traceability: Per-Run Artifacts
+
+Every `./scripts/run_pick_place.sh` invocation writes a timestamped, git-ignored
+directory under `runs/` (not committed; each run can be a few hundred MB) containing:
+
+```text
+runs/<UTC timestamp>_pick_place/
+  pick_place.log   # full stdout/stderr of the state machine, incl. STATE lines
+  rosbag/          # joint_states, TF, cube pose/marker, trajectory and
+                   # gripper action feedback, grasp service calls
+  gazebo.webm      # screen recording, if PANDA_RECORD_VIDEO=1 (default)
+  manifest.txt     # commit hash, result, reset_object, timestamps
+```
+
+The log is no longer deleted after the run (it previously was). Screen
+recording uses [`infra/thinkpad/record_screen.sh`](infra/thinkpad/record_screen.sh),
+which wraps GNOME's built-in Screencast D-Bus API for the ThinkPad's default
+Ubuntu 24.04 GNOME/Wayland session; it has not yet been verified against a
+live session, and a different desktop environment needs a different backend
+(see the comments in that script). Recording failures are logged but do not
+fail the run. Disable video with `PANDA_RECORD_VIDEO=0`. Prune old runs with:
+
+```bash
+./scripts/prune_runs.sh 20   # keep the newest 20 runs, delete the rest
+```
+
 ## Stop
 
 Stop Gazebo with `Ctrl+C` in Terminal 1. Stop the persistent Jetson planner:
@@ -139,6 +165,7 @@ PANDA_CONTAINER_NAME=panda-planner
 PANDA_IMAGE_TAG=panda-planner:jazzy
 PANDA_READY_TIMEOUT=60
 PANDA_RESET_OBJECT=true
+PANDA_RECORD_VIDEO=1
 ```
 
 Do not source both host environment files manually. ThinkPad scripts source
