@@ -1,7 +1,5 @@
 # Distributed ROS 2 Panda Pick and Place
 
-[![CI](https://github.com/SeSchrtr/dummyROS2Sandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/SeSchrtr/dummyROS2Sandbox/actions/workflows/ci.yml)
-
 This project runs Gazebo Harmonic and `ros2_control` on an Ubuntu 24.04
 ThinkPad while RGB-D perception, MoveIt 2, OMPL, and the pick-and-place state
 machine run in an ARM64 ROS 2 Jazzy container on a Jetson Nano. The two sides
@@ -100,6 +98,16 @@ PANDA_RESET_OBJECT=0 ./scripts/run_pick_place.sh
 
 ## Tests
 
+`panda_perception` and `panda_pick_place` factor their pure logic (median/MAD
+filtering, plausibility bounds, depth colormap, pose/collision-shape helpers)
+into headers under `include/`, covered by `ament_cmake_gtest` unit tests that
+run in CI without Gazebo, MoveIt, or a Jetson:
+
+```bash
+colcon test --packages-select panda_perception panda_pick_place
+colcon test-result --verbose
+```
+
 Build the lightweight DDS image and run bidirectional LAN communication tests:
 
 ```bash
@@ -141,3 +149,7 @@ Do not source both host environment files manually. ThinkPad scripts source
 Use [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) for DDS discovery,
 controller readiness, Docker build, Gazebo/VS Code Snap, and known upstream
 warning diagnostics.
+
+## License
+
+MIT, see [`LICENSE`](LICENSE).

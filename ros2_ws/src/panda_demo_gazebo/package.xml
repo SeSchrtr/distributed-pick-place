@@ -3,8 +3,8 @@
   <name>panda_demo_gazebo</name>
   <version>0.1.0</version>
   <description>Gazebo Harmonic world and launch files for the distributed Panda demo.</description>
-  <maintainer email="user@example.com">Workspace User</maintainer>
-  <license>Apache-2.0</license>
+  <maintainer email="sebastian.schroeter@mailbox.org">Sebastian Schroeter</maintainer>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <exec_depend>controller_manager</exec_depend>

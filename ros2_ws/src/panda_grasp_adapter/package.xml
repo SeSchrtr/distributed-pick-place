@@ -3,8 +3,8 @@
   <name>panda_grasp_adapter</name>
   <version>0.1.0</version>
   <description>ROS services backed by Gazebo Transport for DetachableJoint.</description>
-  <maintainer email="user@example.com">Workspace User</maintainer>
-  <license>Apache-2.0</license>
+  <maintainer email="sebastian.schroeter@mailbox.org">Sebastian Schroeter</maintainer>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>gz_msgs_vendor</depend>

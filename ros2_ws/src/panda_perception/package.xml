@@ -3,8 +3,8 @@
   <name>panda_perception</name>
   <version>0.1.0</version>
   <description>RGB-D based cube pose estimation for the Panda demonstration.</description>
-  <maintainer email="user@example.com">Workspace User</maintainer>
-  <license>Apache-2.0</license>
+  <maintainer email="sebastian.schroeter@mailbox.org">Sebastian Schroeter</maintainer>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>cv_bridge</depend>
@@ -19,6 +19,8 @@
   <exec_depend>image_transport</exec_depend>
   <exec_depend>compressed_image_transport</exec_depend>
   <exec_depend>compressed_depth_image_transport</exec_depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
