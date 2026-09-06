@@ -16,8 +16,8 @@ docker run --detach \
   --env ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET \
   "${IMAGE_TAG}" \
   bash -lc 'source /opt/panda_env.sh \
-    && ros2 launch panda_perception perception.launch.py & \
-    ros2 launch panda_demo_moveit_config planner.launch.py & \
-    wait -n'
+    && { ros2 launch panda_perception perception.launch.py & \
+         ros2 launch panda_demo_moveit_config planner.launch.py & \
+         wait -n; }'
 
 echo "Started ${CONTAINER_NAME} from ${IMAGE_TAG}"

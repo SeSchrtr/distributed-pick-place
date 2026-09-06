@@ -15,6 +15,7 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     launch_rviz = LaunchConfiguration("launch_rviz")
+    gz_headless_args = LaunchConfiguration("gz_headless_args")
     description = Command(
         [
             FindExecutable(name="xacro"),
@@ -33,7 +34,12 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([FindPackageShare("ros_gz_sim"), "launch", "gz_sim.launch.py"])
         ),
-        launch_arguments={"gz_args": ["-r -v 2 ", world]}.items(),
+        # gz_headless_args lets callers append e.g. "-s --headless-rendering" to run
+        # Gazebo without its own GUI client, which otherwise competes for CPU with the
+        # physics server and can drop the simulation's real-time factor far below 1.0
+        # (observed as ~0.13x with GUI + RViz both running), causing sim-time-scaled
+        # waits elsewhere in the stack to appear to hang or time out.
+        launch_arguments={"gz_args": ["-r -v 2 ", gz_headless_args, " ", world]}.items(),
     )
     state_publisher = Node(
         package="robot_state_publisher",
@@ -154,6 +160,14 @@ def generate_launch_description():
                 "launch_rviz",
                 default_value="true",
                 description="Start RViz with the filtered depth image and cube estimate",
+            ),
+            DeclareLaunchArgument(
+                "gz_headless_args",
+                default_value="",
+                description=(
+                    "Extra gz sim args, e.g. '-s --headless-rendering' to run without a "
+                    "GUI client (recommended for automated/recorded runs)."
+                ),
             ),
             gazebo,
             clock_bridge,

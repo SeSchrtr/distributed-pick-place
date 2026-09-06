@@ -123,7 +123,15 @@ private:
       const double image_age = std::abs(
         (rclcpp::Time(depth_message->header.stamp) -
         rclcpp::Time(color_message->header.stamp)).seconds());
-      if (image_age > 0.25) {
+      // The cross-host WiFi link between the ThinkPad (Gazebo) and the Jetson
+      // occasionally stalls the compressed depth stream for several seconds
+      // at a time (confirmed via direct topic-rate measurements showing real
+      // multi-second gaps even for brand-new subscribers, i.e. not a bug in
+      // this node's own subscription handling). The scene's cube is static,
+      // so pairing a somewhat-stale depth frame with a fresh color frame is
+      // still positionally valid; 0.25s was tuned for a low-latency LAN and
+      // is far too strict for this link. See docs/TROUBLESHOOTING.md.
+      if (image_age > 3.0) {
         RCLCPP_WARN_THROTTLE(
           get_logger(), *get_clock(), 3000,
           "RGB and depth frames are not synchronized (delta %.3f s)", image_age);

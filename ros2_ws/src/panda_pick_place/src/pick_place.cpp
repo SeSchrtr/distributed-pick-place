@@ -254,7 +254,13 @@ private:
   bool wait_for_cube_pose()
   {
     std::unique_lock<std::mutex> lock(pose_mutex_);
-    if (!pose_condition_.wait_for(lock, 30s, [this]() {return latest_cube_pose_.has_value();})) {
+    // The cross-host RGB-D sync in cube_pose_estimator is best-effort: under
+    // network/CPU jitter its color/depth pairing can go stale for tens of
+    // seconds at a time before self-correcting (observed desync bursts up to
+    // ~15s even on an otherwise healthy stack). 30s was too tight and could
+    // time out mid-burst; 90s gives it room to recover without masking a
+    // truly dead perception pipeline.
+    if (!pose_condition_.wait_for(lock, 90s, [this]() {return latest_cube_pose_.has_value();})) {
       RCLCPP_ERROR(
         logger_, "No fresh RGB-D cube estimate received on /perception/cube_pose");
       return false;
@@ -368,9 +374,21 @@ private:
 
   bool plan_and_execute()
   {
+    // OMPL's sampling-based planners are stochastic; a reachable, collision-free
+    // pose can still occasionally fail to find a plan within one attempt.
     moveit::planning_interface::MoveGroupInterface::Plan plan;
-    if (arm_.plan(plan) != moveit::core::MoveItErrorCode::SUCCESS) {
-      RCLCPP_ERROR(logger_, "MoveIt/OMPL planning failed");
+    constexpr int kMaxPlanningAttempts = 3;
+    bool planned = false;
+    for (int attempt = 1; attempt <= kMaxPlanningAttempts; ++attempt) {
+      if (arm_.plan(plan) == moveit::core::MoveItErrorCode::SUCCESS) {
+        planned = true;
+        break;
+      }
+      RCLCPP_WARN(
+        logger_, "MoveIt/OMPL planning attempt %d/%d failed", attempt, kMaxPlanningAttempts);
+    }
+    if (!planned) {
+      RCLCPP_ERROR(logger_, "MoveIt/OMPL planning failed after %d attempts", kMaxPlanningAttempts);
       return false;
     }
     RCLCPP_INFO(logger_, "Planned %zu trajectory points",

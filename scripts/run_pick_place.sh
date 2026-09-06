@@ -33,6 +33,11 @@ cleanup() {
     "${SCRIPT_DIR}/../infra/thinkpad/record_screen.sh" stop \
       >>"${RUN_DIR}/record_screen.log" 2>&1 || true
   fi
+  # --disable-keyboard-controls can bypass rosbag2's normal graceful shutdown,
+  # leaving an mcap file with no metadata.yaml; reindex to make the bag usable.
+  if [[ -d "${BAG_DIR}" ]] && ! ros2 bag info "${BAG_DIR}" >/dev/null 2>&1; then
+    ros2 bag reindex "${BAG_DIR}" >>"${RUN_DIR}/rosbag_record.log" 2>&1 || true
+  fi
 }
 trap cleanup EXIT
 
@@ -81,6 +86,7 @@ wait_until "RGB-D cube pose" cube_pose_available
 wait_until "Jetson move_group" move_group_ready
 
 ros2 bag record -o "${BAG_DIR}" \
+  --disable-keyboard-controls \
   --topics /joint_states /tf /tf_static /perception/cube_pose /perception/cube_marker \
     /panda_arm_controller/follow_joint_trajectory/_action/feedback \
     /panda_arm_controller/follow_joint_trajectory/_action/status \
