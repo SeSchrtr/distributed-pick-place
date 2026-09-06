@@ -1,5 +1,7 @@
 # Distributed ROS 2 Panda Pick and Place
 
+[![CI](https://github.com/SeSchrtr/distributed-pick-place/actions/workflows/ci.yml/badge.svg)](https://github.com/SeSchrtr/distributed-pick-place/actions/workflows/ci.yml)
+
 This project runs Gazebo Harmonic and `ros2_control` on an Ubuntu 24.04
 ThinkPad while RGB-D perception, MoveIt 2, OMPL, and the pick-and-place state
 machine run in an ARM64 ROS 2 Jazzy container on a Jetson Nano. The two sides
