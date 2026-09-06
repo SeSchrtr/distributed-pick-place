@@ -29,6 +29,8 @@
 #include <tf2_ros/transform_listener.h>
 #include <unistd.h>
 
+#include "panda_pick_place/geometry_helpers.hpp"
+
 using namespace std::chrono_literals;
 
 namespace
@@ -100,26 +102,6 @@ void log_deployment(const rclcpp::Logger & logger)
     env("RMW_IMPLEMENTATION").c_str());
 }
 
-geometry_msgs::msg::Pose downward_pose(double x, double y, double z)
-{
-  geometry_msgs::msg::Pose pose;
-  pose.position.x = x;
-  pose.position.y = y;
-  pose.position.z = z;
-  pose.orientation.x = 1.0;
-  pose.orientation.y = 0.0;
-  pose.orientation.z = 0.0;
-  pose.orientation.w = 0.0;
-  return pose;
-}
-
-shape_msgs::msg::SolidPrimitive box(double x, double y, double z)
-{
-  shape_msgs::msg::SolidPrimitive primitive;
-  primitive.type = shape_msgs::msg::SolidPrimitive::BOX;
-  primitive.dimensions = {x, y, z};
-  return primitive;
-}
 }  // namespace
 
 class PickPlaceStateMachine
@@ -253,10 +235,7 @@ private:
       return;
     }
     const auto & position = message->pose.position;
-    if (!std::isfinite(position.x) || !std::isfinite(position.y) ||
-      !std::isfinite(position.z) || position.x < 0.15 || position.x > 0.90 ||
-      position.y < -0.45 || position.y > 0.45 || position.z < 0.73 || position.z > 0.84)
-    {
+    if (!panda_pick_place::is_plausible_cube_pose(position.x, position.y, position.z)) {
       RCLCPP_WARN_THROTTLE(
         logger_, *node_->get_clock(), 3000,
         "Ignoring implausible cube pose x=%.3f y=%.3f z=%.3f",
@@ -290,13 +269,13 @@ private:
 
   geometry_msgs::msg::Pose pick_target(double height_offset) const
   {
-    return downward_pose(
+    return panda_pick_place::downward_pose(
       pick_pose_.position.x, pick_pose_.position.y, pick_pose_.position.z + height_offset);
   }
 
   geometry_msgs::msg::Pose place_target(double height_offset) const
   {
-    return downward_pose(kPlaceX, kPlaceY, pick_pose_.position.z + height_offset);
+    return panda_pick_place::downward_pose(kPlaceX, kPlaceY, pick_pose_.position.z + height_offset);
   }
 
   bool initialize_planning_scene()
@@ -304,7 +283,7 @@ private:
     moveit_msgs::msg::CollisionObject table;
     table.header.frame_id = kWorldFrame;
     table.id = "table";
-    table.primitives.push_back(box(0.9, 0.9, 0.75));
+    table.primitives.push_back(panda_pick_place::box(0.9, 0.9, 0.75));
     geometry_msgs::msg::Pose table_pose;
     table_pose.position.x = 0.55;
     table_pose.position.z = 0.375;
@@ -352,7 +331,7 @@ private:
     moveit_msgs::msg::CollisionObject cube;
     cube.header.frame_id = kWorldFrame;
     cube.id = kCubeId;
-    cube.primitives.push_back(box(0.05, 0.05, 0.05));
+    cube.primitives.push_back(panda_pick_place::box(0.05, 0.05, 0.05));
     geometry_msgs::msg::Pose pose;
     pose.position.x = x;
     pose.position.y = y;

@@ -26,6 +26,8 @@
 #include <tf2_ros/transform_listener.h>
 #include <visualization_msgs/msg/marker.hpp>
 
+#include "panda_perception/cube_pose_math.hpp"
+
 using namespace std::chrono_literals;
 
 class CubePoseEstimator : public rclcpp::Node
@@ -79,51 +81,6 @@ public:
   }
 
 private:
-  static double median(std::vector<double> values)
-  {
-    const auto middle = values.begin() + static_cast<std::ptrdiff_t>(values.size() / 2);
-    std::nth_element(values.begin(), middle, values.end());
-    return *middle;
-  }
-
-  static cv::Mat depth_as_meters(const sensor_msgs::msg::Image::ConstSharedPtr & message)
-  {
-    const auto image = cv_bridge::toCvShare(message);
-    if (message->encoding == sensor_msgs::image_encodings::TYPE_32FC1) {
-      return image->image;
-    }
-    if (message->encoding == sensor_msgs::image_encodings::TYPE_16UC1) {
-      cv::Mat meters;
-      image->image.convertTo(meters, CV_32FC1, 0.001);
-      return meters;
-    }
-    throw cv_bridge::Exception("Unsupported depth encoding: " + message->encoding);
-  }
-
-  static cv::Mat make_depth_colormap(const cv::Mat & depth)
-  {
-    cv::Mat normalized(depth.size(), CV_8UC1, cv::Scalar(0));
-    cv::Mat valid(depth.size(), CV_8UC1, cv::Scalar(0));
-    for (int row = 0; row < depth.rows; ++row) {
-      const float * source = depth.ptr<float>(row);
-      uint8_t * target = normalized.ptr<uint8_t>(row);
-      uint8_t * valid_row = valid.ptr<uint8_t>(row);
-      for (int column = 0; column < depth.cols; ++column) {
-        const float value = source[column];
-        if (std::isfinite(value) && value >= 0.10F && value <= 3.0F) {
-          const float scaled = std::clamp((2.0F - value) / 1.7F, 0.0F, 1.0F);
-          target[column] = static_cast<uint8_t>(scaled * 255.0F);
-          valid_row[column] = 255;
-        }
-      }
-    }
-
-    cv::Mat colorized;
-    cv::applyColorMap(normalized, colorized, cv::COLORMAP_TURBO);
-    colorized.setTo(cv::Scalar(20, 20, 20), valid == 0);
-    return colorized;
-  }
-
   void publish_depth_view(
     const std_msgs::msg::Header & header, const cv::Mat & view,
     const std::vector<cv::Point> * contour = nullptr, const cv::Point * centroid = nullptr,
@@ -161,8 +118,8 @@ private:
     }
 
     try {
-      const cv::Mat depth = depth_as_meters(depth_message);
-      cv::Mat depth_view = make_depth_colormap(depth);
+      const cv::Mat depth = panda_perception::depth_as_meters(depth_message);
+      cv::Mat depth_view = panda_perception::make_depth_colormap(depth);
       const double image_age = std::abs(
         (rclcpp::Time(depth_message->header.stamp) -
         rclcpp::Time(color_message->header.stamp)).seconds());
@@ -250,7 +207,7 @@ private:
         deviations.begin() + static_cast<std::ptrdiff_t>(deviations.size() / 2);
       std::nth_element(deviations.begin(), deviation_middle, deviations.end());
       const float median_absolute_deviation = *deviation_middle;
-      if (median_absolute_deviation > 0.015F) {
+      if (!panda_perception::is_depth_noise_acceptable(median_absolute_deviation)) {
         RCLCPP_WARN_THROTTLE(
           get_logger(), *get_clock(), 3000,
           "Rejected noisy cube depth (median absolute deviation %.3f m)",
@@ -285,9 +242,8 @@ private:
       cube_pose.pose.position.z -= 0.025;
       cube_pose.pose.orientation.w = 1.0;
 
-      if (cube_pose.pose.position.x < 0.05 || cube_pose.pose.position.x > 1.05 ||
-        cube_pose.pose.position.y < -0.50 || cube_pose.pose.position.y > 0.50 ||
-        cube_pose.pose.position.z < 0.73 || cube_pose.pose.position.z > 0.84)
+      if (!panda_perception::is_plausible_cube_position(
+          cube_pose.pose.position.x, cube_pose.pose.position.y, cube_pose.pose.position.z))
       {
         RCLCPP_WARN_THROTTLE(
           get_logger(), *get_clock(), 3000,
@@ -326,9 +282,9 @@ private:
         y_values.push_back(position.y);
         z_values.push_back(position.z);
       }
-      cube_pose.pose.position.x = median(std::move(x_values));
-      cube_pose.pose.position.y = median(std::move(y_values));
-      cube_pose.pose.position.z = median(std::move(z_values));
+      cube_pose.pose.position.x = panda_perception::median(std::move(x_values));
+      cube_pose.pose.position.y = panda_perception::median(std::move(y_values));
+      cube_pose.pose.position.z = panda_perception::median(std::move(z_values));
 
       pose_pub_->publish(cube_pose);
       visualization_msgs::msg::Marker marker;

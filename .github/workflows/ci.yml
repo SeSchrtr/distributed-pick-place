@@ -15,8 +15,9 @@ jobs:
         with:
           required-ros-distributions: jazzy
 
-      # Builds every package under ros2_ws/src and runs their default tests.
-      # This does not start Gazebo/MoveIt; it only proves the workspace compiles.
+      # Builds every package and runs their gtest suites (panda_perception,
+      # panda_pick_place). This does not start Gazebo/MoveIt; it only proves the
+      # workspace compiles and the pure-logic unit tests pass.
       - uses: ros-tooling/action-ros-ci@v0.3
         with:
           package-name: >

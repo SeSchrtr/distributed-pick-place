@@ -22,6 +22,8 @@ ament_target_dependencies(motion_test moveit_ros_planning_interface rclcpp)
 target_compile_features(motion_test PUBLIC cxx_std_17)
 
 add_executable(pick_place src/pick_place.cpp)
+target_include_directories(pick_place PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 ament_target_dependencies(
   pick_place
   control_msgs
@@ -39,5 +41,13 @@ target_compile_features(pick_place PUBLIC cxx_std_17)
 
 install(TARGETS motion_test pick_place DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_geometry_helpers test/test_geometry_helpers.cpp)
+  target_include_directories(test_geometry_helpers PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+  ament_target_dependencies(test_geometry_helpers geometry_msgs shape_msgs)
+endif()
 
 ament_package()
